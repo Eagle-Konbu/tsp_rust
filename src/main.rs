@@ -9,13 +9,38 @@ macro_rules! parse_input {
     };
 }
 
-/**
- * Auto-generated code below aims at helping you parse
- * the standard input according to the problem statement.
- **/
+const TIMELIMIT: f64 = 2.7;
+
+fn get_time() -> f64 {
+    let t = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap();
+    t.as_secs() as f64 + t.subsec_nanos() as f64 * 1e-9
+}
+struct Timer {
+    start_time: f64,
+}
+
+impl Timer {
+    fn new() -> Timer {
+        Timer {
+            start_time: get_time(),
+        }
+    }
+
+    fn get_time(&self) -> f64 {
+        get_time() - self.start_time
+    }
+
+    #[allow(dead_code)]
+    fn reset(&mut self) {
+        self.start_time = 0.0;
+    }
+}
+
 fn main() {
     let mut points = Point::import();
-    let ans = beam_search(&points, 3);
+    let ans = beam_search(&points, 5);
     for x in ans {
         print!("{} ", x);
     }
@@ -64,6 +89,8 @@ impl Point {
 }
 
 fn beam_search(points: &Vec<Point>, beam_width: usize) -> Vec<usize> {
+    let mut timer = Timer::new();
+
     let mut deq = VecDeque::new();
     deq.push_back((points[0], vec![0]));
 
@@ -73,20 +100,28 @@ fn beam_search(points: &Vec<Point>, beam_width: usize) -> Vec<usize> {
         if deq.is_empty() {
             break;
         }
-
-        let (point, path) = deq.pop_front().unwrap();
         let mut heap = BinaryHeap::new();
-        for i in 0..points.len() {
-            if path.contains(&i) {
-                continue;
+
+        loop {
+            if deq.is_empty() {
+                break;
             }
-            heap.push((-points[i].distance(&point) as i32, i));
+            let (point, path) = deq.pop_front().unwrap();
+            for i in 0..points.len() {
+                if path.contains(&i) {
+                    continue;
+                }
+                heap.push((-points[i].distance(&point) as i32, i, path.clone()));
+            }
         }
         for _ in 0..beam_width {
+            if timer.get_time() >= TIMELIMIT {
+                break;
+            }
             if heap.is_empty() {
                 break;
             }
-            let (dist, i) = heap.pop().unwrap();
+            let (_dist, i, path) = heap.pop().unwrap();
             let mut new_path = path.clone();
             new_path.push(i);
             if new_path.len() == points.len() {
