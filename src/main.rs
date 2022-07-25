@@ -9,7 +9,7 @@ macro_rules! parse_input {
     };
 }
 
-const TIMELIMIT: f64 = 2.7;
+const TIMELIMIT: f64 = 2.8;
 
 fn get_time() -> f64 {
     let t = std::time::SystemTime::now()
@@ -39,8 +39,11 @@ impl Timer {
 }
 
 fn main() {
+    let mut timer = Timer::new();
     let mut points = Point::import();
-    let ans = beam_search(&points, 5);
+
+    // let ans = beam_search(&points, 5);
+    let ans = chokudai_search(&points, 1, &mut timer);
     for x in ans {
         print!("{} ", x);
     }
@@ -136,4 +139,42 @@ fn beam_search(points: &Vec<Point>, beam_width: usize) -> Vec<usize> {
     let ans = ans_heap.pop().unwrap();
 
     return ans.1;
+}
+
+fn chokudai_search(points: &Vec<Point>, chokudai_width: usize, timer: &mut Timer) -> Vec<usize> {
+    let mut heaps = vec![BinaryHeap::new(); points.len() + 1];
+    heaps[1].push((0, vec![0]));
+    loop {
+        if timer.get_time() >= TIMELIMIT {
+            break;
+        }
+        for t in 1..points.len() {
+            if timer.get_time() >= TIMELIMIT {
+                break;
+            }
+            for _ in 0..chokudai_width {
+                if heaps[t].is_empty() {
+                    break;
+                }
+                let (dist, path) = heaps[t].pop().unwrap();
+                let point = points[path[path.len() - 1]];
+                for i in 0..points.len() {
+                    if path.contains(&i) {
+                        continue;
+                    }
+                    let mut new_path = path.clone();
+                    new_path.push(i);
+                    heaps[t + 1].push((-Point::length(points, &new_path), new_path));
+                    if timer.get_time() >= TIMELIMIT {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    let mut ans = heaps[points.len()].pop().unwrap().1;
+    ans.push(0);
+
+    return ans;
 }
